@@ -11,6 +11,8 @@ const (
 	feelingsAwful   = ":chart_with_downwards_trend: :cold_sweat:"
 
 	marketsClosedMessage = ":thinking: the markets aren't open today, but here's the last trading day:\n"
+
+	dateTimeFormat = "Jan 2, 2006 at 3:04:05pm MST"
 )
 
 var (

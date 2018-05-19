@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"time"
 
 	"github.com/KyleBanks/go-yf"
@@ -10,8 +11,8 @@ import (
 )
 
 func main() {
-	indices := parseIndices()
-	if len(indices) == 0 {
+	a := newArgs()
+	if !a.validate() {
 		flag.Usage()
 		return
 	}
@@ -20,22 +21,22 @@ func main() {
 		emoji.Println(marketsClosedMessage)
 	}
 
-	positiveCount, err := processAll(indices)
+	positiveCount, err := processIndices(a)
 	if err != nil {
 		panic(err)
 	}
 
-	printFeelings(positiveCount, len(indices))
+	printFeelings(positiveCount, len(a.indices))
 }
 
 func validateDay(d time.Weekday) bool {
 	return d != time.Saturday && d != time.Sunday
 }
 
-func processAll(indices []index) (int, error) {
+func processIndices(a args) (int, error) {
 	var positiveCount int
-	for _, i := range indices {
-		positive, err := process(i)
+	for _, i := range a.indices {
+		positive, err := process(a, i)
 		if err != nil {
 			return 0, err
 		}
@@ -47,7 +48,7 @@ func processAll(indices []index) (int, error) {
 	return positiveCount, nil
 }
 
-func process(i index) (bool, error) {
+func process(a args, i index) (bool, error) {
 	// Use a range of one week in case today is a weekend or holiday, this
 	// at least provides the most recent day.
 	index, err := yf.GetStock(i.symbol, "1w", yf.IntervalOneDay)
@@ -69,7 +70,23 @@ func process(i index) (bool, error) {
 		c = colorNegative
 	}
 
-	c.Printf("%v:\n  $%.02f -> $%.02f\n", i.display, open, close)
+	var pctStr string
+	if a.showPercentage {
+		pct := (close - open) / open * 100
+		pctStr = fmt.Sprintf("(%.02f%%)", pct)
+	}
+
+	var timeStr string
+	if a.showTimes {
+		t := time.Unix(index.Timestamp[0], 0)
+		loc, err := time.LoadLocation(index.Meta.ExchangeTimezoneName)
+		if err == nil && loc != nil {
+			t = t.In(loc)
+		}
+		timeStr = fmt.Sprintf("  %v\n", t.Format(dateTimeFormat))
+	}
+
+	c.Printf("%v:\n  $%.02f -> $%.02f %v\n%v", i.display, open, close, pctStr, timeStr)
 	return positive, nil
 }
 
